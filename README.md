@@ -201,8 +201,6 @@ echo "=================================================="
 
 ---
 ```
+[![Voir la démo](https://raw.githubusercontent.com/yourusername/yourrepository/main/assets/thumbnail.jpg)](https://raw.githubusercontent.com/yourusername/yourrepository/main/assets/video.mp4)
 
-<video width="600" controls>
-  <source src="videos/demo.mp4" type="video/mp4">
-  Votre navigateur ne supporte pas la vidéo.
-</video>
+<video src="videos/demo.mp4" width="320" height="240" controls></video>
