@@ -158,41 +158,50 @@ spec:
 #!/bin/bash
 
 echo "=================================================="
-echo "   TEST AUTOMATISÉ : STREAMING VIDEO 5G (NexSlice)"
+echo "   TEST COMPLET NEXSLICE : REALISTE + MAX SPEED"
 echo "=================================================="
 
-echo "[1/3] Recherche du Pod UE..."
+# 1. Récupération automatique
+echo "[INIT] Recherche des composants..."
 UE_POD=$(sudo k3s kubectl get pods -n nexslice | grep "ueransim-ue1" | awk '{print $1}')
-
-if [ -z "$UE_POD" ]; then
-    echo "ERREUR : Aucun UE trouvé. Vérifiez que le RAN est démarré."
-    exit 1
-fi
-echo "      -> Client trouvé : $UE_POD"
-
-echo "[2/3] Recherche de l'IP du Serveur Vidéo..."
 VIDEO_IP=$(sudo k3s kubectl get pod video-server -n nexslice -o jsonpath='{.status.podIP}')
 
-if [ -z "$VIDEO_IP" ]; then
-    echo "ERREUR : Serveur vidéo introuvable."
+if [ -z "$UE_POD" ] || [ -z "$VIDEO_IP" ]; then
+    echo "ERREUR : UE ou Serveur introuvable."
     exit 1
 fi
-echo "      -> Cible trouvée : $VIDEO_IP"
+echo "      -> UE: $UE_POD | Serveur: $VIDEO_IP"
+echo "--------------------------------------------------"
 
-echo "[3/3] Lancement du téléchargement via l'interface 5G (uesimtun0)..."
-sudo k3s kubectl exec -it -n nexslice $UE_POD -- curl --interface uesimtun0 http://$VIDEO_IP/movie.mp4 -o /dev/null --limit-rate 5M
+# --- TEST 1 : STREAMING RÉALISTE (QoS) ---
+echo ""
+echo "[TEST 1/2] Simulation Streaming 4K (Limité à 5MB/s - 40Mbps)"
+echo "      -> Durée étendue à 60s pour bien voir le plateau Grafana..."
 
+# On laisse tourner 60 secondes pour bien stabiliser le graphique
+sudo k3s kubectl exec -it -n nexslice $UE_POD -- curl --interface uesimtun0 http://$VIDEO_IP/movie.mp4 -o /dev/null --limit-rate 5M --max-time 60
+
+echo ""
+echo "--------------------------------------------------"
+echo "   PAUSE (5 secondes) - Regardez Grafana redescendre"
+echo "--------------------------------------------------"
+sleep 5
+
+# --- TEST 2 : CAPACITÉ MAXIMALE (eMBB) ---
+echo ""
+echo "[TEST 2/2] Test de Capacité Max (eMBB - Sans limite)"
+echo "      -> Téléchargement complet du fichier (500Mo)..."
+# Pas de limite de temps : on télécharge tout jusqu'à la fin
+sudo k3s kubectl exec -it -n nexslice $UE_POD -- curl --interface uesimtun0 http://$VIDEO_IP/movie.mp4 -o /dev/null
+
+echo ""
 echo "=================================================="
-echo "   FIN DU TEST"
+echo "   DÉMO TERMINÉE AVEC SUCCÈS"
 echo "=================================================="
-```
 
 ---
 
-Si tu veux :
-✔️ version PDF
-✔️ version GitHub stylée
-✔️ ajout d’icônes, couleurs, schémas
-
-Je peux te la générer immédiatement.
-
+<video width="600" controls>
+  <source src="videos/demo.mp4" type="video/mp4">
+  Votre navigateur ne supporte pas la vidéo.
+</video>
