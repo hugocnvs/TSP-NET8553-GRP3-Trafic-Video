@@ -57,7 +57,7 @@ Observations :
 * **Grafana** : augmentation nette du trafic UPF, confirmant que le flux vidéo transite bien par le plan utilisateur 5G.
 
 📷 *Image ici*
-`![Streaming 5Mbps](images/stream_5mbps.png)`
+`![Streaming 5Mbps](img/3.png)`
 
 ### Scénario B : Test de Capacité Maximale (Sans Limite)
 
@@ -67,7 +67,7 @@ En supprimant la limitation :
 * **Grafana** : pic à 19.2 MB/s sur l’UPF
 
 📷 *Image ici*
-`![Grafana Unlimited](images/grafana_unlimited.png)`
+`![Grafana Unlimited](img/4.png)`
 
 ---
 
@@ -88,8 +88,7 @@ L'expérimentation valide fonctionnellement le cas d'usage eMBB.
 ```bash
 sudo k3s kubectl get pods -n nexslice -o wide
 ```
-
-📷 *Image ici*
+`![Grafana 1](img/1.png)`
 
 ---
 
@@ -100,8 +99,7 @@ export UE1_POD=$(sudo k3s kubectl get pods -n nexslice | grep "ueransim-ue1" | a
 clear
 sudo k3s kubectl exec -it -n nexslice $UE1_POD -- ip a show uesimtun0
 ```
-
-📷 *Image ici*
+`![Grafana 1](img/2.png)`
 
 ---
 
@@ -119,8 +117,7 @@ export VIDEO_IP=$(sudo k3s kubectl get pod video-server -n nexslice -o jsonpath=
 ```bash
 sudo k3s kubectl exec -it -n nexslice $UE1_POD -- curl --interface uesimtun0 http://$video_ip/movie.mp4 -o /dev/null --limit-rate 5M
 ```
-
-📷 *Image ici*
+`![Grafana 1](img/5.png)`
 
 ---
 
