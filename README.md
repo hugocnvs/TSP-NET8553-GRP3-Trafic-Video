@@ -201,6 +201,11 @@ echo "=================================================="
 
 ---
 ```
-[![Voir la démo](https://raw.githubusercontent.com/yourusername/yourrepository/main/assets/thumbnail.jpg)](https://raw.githubusercontent.com/yourusername/yourrepository/main/assets/video.mp4)
+<iframe width="600" height="350" 
+    src="https://youtu.be/2wMxldl3Alk?si=vOtIzP2chwintIhI" 
+    title="YouTube video" 
+    frameborder="0" 
+    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+    allowfullscreen>
+</iframe>
 
-<video src="videos/demo.mp4" width="320" height="240" controls></video>
