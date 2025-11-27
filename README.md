@@ -200,6 +200,7 @@ echo "   DÉMO TERMINÉE AVEC SUCCÈS"
 echo "=================================================="
 
 ---
+```
 
 <video width="600" controls>
   <source src="videos/demo.mp4" type="video/mp4">
