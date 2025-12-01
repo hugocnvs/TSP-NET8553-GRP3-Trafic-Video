@@ -21,9 +21,9 @@ Les tests ont été réalisés afin de mesurer :
 
 L'objectif de cette phase était de valider la capacité du slice eMBB (Enhanced Mobile Broadband) à supporter un flux applicatif lourd, simulant un usage réel de type "Streaming Vidéo HD/4K".
 
-Compte tenu de l'environnement d'exécution du projet (Architecture Headless / VM sans interface graphique), j'ai opté pour une approche "Cloud-Native" simulant un streaming HTTP (Progressive Download), technologie utilisée par les plateformes de VOD majeures (Netflix, YouTube).
+Compte tenu de l'environnement d'exécution du projet (Architecture Headless / VM sans interface graphique), nous avons opté pour une approche "Cloud-Native" simulant un streaming HTTP (Progressive Download), technologie utilisée par les plateformes de VOD actuelles (Netflix, YouTube).
 
-Au lieu de lancer une interface VLC graphique (incompatible avec l'environnement), j'ai mis en place l'architecture suivante :
+Au lieu de lancer une interface VLC graphique (incompatible avec l'environnement), nous avons mis en place l'architecture suivante :
 
 * **Serveur de Contenu (Content Provider)** : Déploiement d'un pod nginx hébergeant un fichier vidéo haute définition simulé (500 Mo).
 * **Client (UE)** : Utilisation de l'outil curl configuré pour simuler un lecteur vidéo, avec forçage du routage via l'interface 5G.
