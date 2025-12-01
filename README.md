@@ -1,7 +1,7 @@
 
 # Validation du Slice 5G eMBB (NexSlice)
 
-## 📘 Introduction
+## Introduction
 
 Ce projet vise à valider la capacité d’un slice 5G de type **eMBB (Enhanced Mobile Broadband)** à supporter un trafic vidéo lourd simulant un usage réel (streaming HD / 4K).
 L’ensemble de l’architecture s’appuie sur un déploiement **Cloud-Native Kubernetes**, avec les fonctions 5G OAI, un UE simulé UERANSIM et un serveur vidéo dédié.
@@ -15,9 +15,9 @@ Les tests ont été réalisés afin de mesurer :
 
 ---
 
-# 📚 1. Contexte du Scénario Vidéo eMBB
+# 1. Contexte
 
-## 1.1 Objectif et Choix Techniques
+## 1.1 Objectif et choix techniques
 
 L'objectif de cette phase était de valider la capacité du slice eMBB (Enhanced Mobile Broadband) à supporter un flux applicatif lourd, simulant un usage réel de type "Streaming Vidéo HD/4K".
 
@@ -30,7 +30,7 @@ Au lieu de lancer une interface VLC graphique (incompatible avec l'environnement
 
 ---
 
-## 1.2 Architecture Déployée
+## 1.2 Architecture déployée
 
 J'ai procédé au déploiement des services applicatifs directement dans le cluster Kubernetes, aux côtés des fonctions réseau 5G.
 
@@ -44,7 +44,7 @@ On observe dans l’état des pods :
 
 ---
 
-## 1.3 Réalisation des Tests et Résultats
+## 1.3 Réalisation des tests et résultats
 
 ### Scénario A : Simulation d’un Flux Streaming Régulé (QoS)
 
@@ -79,7 +79,7 @@ L'expérimentation valide fonctionnellement le cas d'usage eMBB.
 
 ---
 
-# ⚙️ 2. Commandes et Exécutions
+# 2. Commandes utilisées
 
 ## 2.1 Infrastructure complète
 
@@ -90,7 +90,7 @@ sudo k3s kubectl get pods -n nexslice -o wide
 
 ---
 
-## 2.2 Test Connectivité 5G
+## 2.2 Test connectivité
 
 ```bash
 export UE1_POD=$(sudo k3s kubectl get pods -n nexslice | grep "ueransim-ue1" | awk '{print $1}')
@@ -101,7 +101,7 @@ sudo k3s kubectl exec -it -n nexslice $UE1_POD -- ip a show uesimtun0
 
 ---
 
-## 2.3 Test QoS Streaming
+## 2.3 Test QoS streaming
 
 ### Variables
 
@@ -119,7 +119,7 @@ sudo k3s kubectl exec -it -n nexslice $UE1_POD -- curl --interface uesimtun0 htt
 
 ---
 
-# 🗄️ 3. YAML du Serveur Vidéo
+# 3. YAML du Serveur Vidéo
 
 ```yaml
 apiVersion: v1
@@ -152,7 +152,7 @@ spec:
 
 ---
 
-# 🤖 4.1 Script Automatisé de Test
+# 4.1 Script automatisé de test
 
 ```bash
 #!/bin/bash
