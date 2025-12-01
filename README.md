@@ -152,7 +152,7 @@ spec:
 
 ---
 
-# 🤖 4. Script Automatisé de Test
+# 🤖 4.1 Script Automatisé de Test
 
 ```bash
 #!/bin/bash
@@ -198,6 +198,104 @@ echo ""
 echo "=================================================="
 echo "   DÉMO TERMINÉE AVEC SUCCÈS"
 echo "=================================================="
+
+---
+```
+
+# 🤖 4.2 Scipt d'application de la QoS sur l'UPF
+
+```bash
+#!/usr/bin/env bash
+set -e
+
+# Namespace du core 5G + slices
+NS=nexslice
+
+# Slice de UE1 → UPF = oai-upf
+SLICE_ID=1
+
+# Interface N6 dans l’UPF (à adapter si besoin)
+N6_IF="net2"
+
+# Débit max : 5 MB/s ≃ 40 Mbit/s
+RATE="40mbit"
+
+############################################
+# 1) Détection du pod UE1
+############################################
+echo "[INIT] Détection de l'UE1..."
+UE_POD=$(sudo k3s kubectl get pods -n "$NS" \
+  -o name | grep "ueransim-ue1" | head -n1 | cut -d'/' -f2)
+
+if [ -z "$UE_POD" ]; then
+  echo "[ERREUR] ue1 introuvable."
+  exit 1
+fi
+
+echo "[INFO] UE1 : $UE_POD"
+
+############################################
+# 2) Détection du pod video-server
+############################################
+VIDEO_POD=$(sudo k3s kubectl get pods -n "$NS" \
+  -o name | grep "video-server" | head -n1 | cut -d'/' -f2)
+
+if [ -z "$VIDEO_POD" ]; then
+  echo "[ERREUR] video-server introuvable."
+  exit 1
+fi
+
+VIDEO_IP=$(sudo k3s kubectl get pod "$VIDEO_POD" -n "$NS" \
+  -o jsonpath='{.status.podIP}')
+
+echo "[INFO] Video-server : $VIDEO_POD ($VIDEO_IP)"
+
+############################################
+# 3) Détection de l’UPF de la slice
+############################################
+UPF_BASENAME="oai-upf"
+
+UPF_POD=$(sudo k3s kubectl get pods -n "$NS" \
+  -o name | grep "$UPF_BASENAME" | head -n1 | cut -d'/' -f2)
+
+if [ -z "$UPF_POD" ]; then
+  echo "[ERREUR] UPF introuvable."
+  exit 1
+fi
+
+echo "[INFO] UPF : $UPF_POD"
+
+############################################
+# 4) Vérification → QoS déjà appliquée ?
+############################################
+HAS_QDISC=$(sudo k3s kubectl exec -n "$NS" "$UPF_POD" -- \
+  bash -c "tc qdisc show dev $N6_IF | grep -c 'htb 1:' || true")
+
+############################################
+# 5) Si oui → suppression de la QoS
+############################################
+if [ "$HAS_QDISC" != "0" ]; then
+  echo "[QOS] Déjà appliquée → suppression..."
+  sudo k3s kubectl exec -n "$NS" "$UPF_POD" -- bash -c "
+    tc qdisc del dev $N6_IF root 2>/dev/null || true
+  "
+  echo "[DONE] QoS désactivée."
+  exit 0
+fi
+
+############################################
+# 6) Sinon → application de la limite
+############################################
+echo "[QOS] Application de la limite $RATE..."
+
+sudo k3s kubectl exec -n "$NS" "$UPF_POD" -- bash -c "
+  tc qdisc add dev $N6_IF root handle 1: htb default 10
+  tc class add dev $N6_IF parent 1: classid 1:10 htb rate $RATE ceil $RATE
+  tc filter add dev $N6_IF protocol ip parent 1:0 prio 1 u32 match ip dst $VIDEO_IP/32 flowid 1:10
+  tc filter add dev $N6_IF protocol ip parent 1:0 prio 1 u32 match ip src $VIDEO_IP/32 flowid 1:10
+"
+
+echo "[DONE] QoS activée : $RATE vers/depuis $VIDEO_IP"
 
 ---
 ```
