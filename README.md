@@ -299,15 +299,8 @@ echo "[DONE] QoS activée : $RATE vers/depuis $VIDEO_IP"
 
 ---
 ```
-
 En conditions réelles, nous aurions configuré le cœur de réseau (AMBR) pour appliquer la limitation directement sur l'UPF comme sur le second script. Mais pour simplifier la démonstration, nous avons appliqué la QoS directement au niveau de l'application cliente (User Equipment) via un bridage logiciel du débit.
-Le résultat pour le client est le même mais au lieu que ce soit l'application qui drop les paquets pour limiter le débit c'est l'UPF de le fait. 
+Le résultat pour le client est le même mais au lieu que ce soit l'application qui drop les paquets pour limiter le débit c'est l'UPF de le fait.
 
-<iframe width="600" height="350" 
-    src="https://youtu.be/2wMxldl3Alk?si=vOtIzP2chwintIhI" 
-    title="YouTube video" 
-    frameborder="0" 
-    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-    allowfullscreen>
-</iframe>
-
+### Vidéo de démonstration  
+[Visionner](https://youtu.be/2wMxldl3Alk?si=vOtIzP2chwintIhI)
