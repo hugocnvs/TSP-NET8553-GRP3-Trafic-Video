@@ -303,4 +303,4 @@ En conditions réelles, nous aurions configuré le cœur de réseau (AMBR) pour 
 Le résultat pour le client est le même mais au lieu que ce soit l'application qui drop les paquets pour limiter le débit c'est l'UPF de le fait.
 
 ### Vidéo de démonstration  
-[Visionner](https://youtu.be/2wMxldl3Alk?si=vOtIzP2chwintIhI)
+[Visionner]([https://youtu.be/2wMxldl3Alk?si=vOtIzP2chwintIhI](https://drive.google.com/file/d/1guj3hrt7OCgzpPTGvE3n1V-w_NEDkli0/view?usp=share_link))
