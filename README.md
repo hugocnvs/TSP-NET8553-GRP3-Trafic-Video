@@ -32,7 +32,7 @@ Au lieu de lancer une interface VLC graphique (incompatible avec l'environnement
 
 ## 1.2 Architecture déployée
 
-J'ai procédé au déploiement des services applicatifs directement dans le cluster Kubernetes, aux côtés des fonctions réseau 5G.
+Nous avons procédé au déploiement des services applicatifs directement dans le cluster Kubernetes, aux côtés des fonctions réseau 5G dans le même namespace.
 
 On observe dans l’état des pods :
 
@@ -48,7 +48,7 @@ On observe dans l’état des pods :
 
 ### Scénario A : Simulation d’un Flux Streaming Régulé (QoS)
 
-Pour ce premier test, j’ai limité le débit à **5 Mo/s (40 Mbps)**.
+Pour ce premier test, on a limité le débit à **5 Mo/s (40 Mbps)**.
 
 Observations :
 
@@ -57,7 +57,7 @@ Observations :
 
 ![Streaming 5Mbps](img/3.png)`
 
-### Scénario B : Test de Capacité Maximale (Sans Limite)
+### Scénario B : test de capacité maximale (Sans Limite)
 
 En supprimant la limitation :
 
