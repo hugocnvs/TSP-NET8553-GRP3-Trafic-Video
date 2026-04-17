@@ -1,306 +1,179 @@
+# 404CTF — Gestionnaire LDAP
 
-# Validation du Slice 5G eMBB (NexSlice)
+Application de gestion des comptes Active Directory pour le 404CTF, avec deux interfaces distinctes.
 
-## Introduction
+## Architecture
 
-Ce projet vise à valider la capacité d’un slice 5G de type **eMBB (Enhanced Mobile Broadband)** à supporter un trafic vidéo lourd simulant un usage réel (streaming HD / 4K).
-L’ensemble de l’architecture s’appuie sur un déploiement **Cloud-Native Kubernetes**, avec les fonctions 5G OAI, un UE simulé UERANSIM et un serveur vidéo dédié.
+```
+404ctf-ldap-manager/
+├── shared/                  # Module Python partagé (logique métier)
+│   ├── ldap_core.py         # Fonctions LDAP/AD, validation CTFd
+│   ├── config_manager.py    # CRUD challenge_config.json
+│   └── log_manager.py       # Gestion CSV + logs
+│
+├── player/                  # Interface joueurs (port 5000)
+│   ├── app.py
+│   └── templates/           # 5 templates (base, index, form, success, error)
+│
+├── admin/                   # Interface administration (port 5001)
+│   ├── app.py
+│   └── templates/           # 7 templates (base, login, dashboard, accounts, logs, config, config_edit)
+│
+├── Dockerfile.player        # Image Player
+├── Dockerfile.admin         # Image Admin
+├── docker-compose.yml       # 2 services + volume partagé
+├── deploy.sh                # Script de déploiement
+├── challenge_config.json    # Configuration des challenges
+└── requirements.txt         # Dépendances Python
+```
 
-Les tests ont été réalisés afin de mesurer :
+## Interfaces
 
-* La stabilité du débit sous contrainte (QoS à 5 Mbps)
-* Le comportement en mode *Best Effort* (débit maximal)
-* La corrélation des mesures via Grafana sur l’UPF
-* La capacité du chemin utilisateur (User Plane 5G) à transporter un flux vidéo continu
+### Player (port 5000)
+Interface pour les joueurs du CTF :
+- Liste des challenges disponibles
+- Formulaire de création de compte AD (avec validation token CTFd)
+- Affichage des identifiants générés
 
----
+### Admin (port 5001)
+Interface pour le staff :
+- **Dashboard** : statistiques en temps réel (comptes créés, challenges actifs)
+- **Comptes** : tableau live des comptes créés, recherche, export CSV
+- **Logs** : viewer de logs style terminal avec filtrage par niveau, auto-refresh
+- **Configuration** : CRUD complet sur les challenges (ajout, modification, suppression)
 
-# 1. Contexte
-
-## 1.1 Objectif et choix techniques
-
-L'objectif de cette phase était de valider la capacité du slice eMBB (Enhanced Mobile Broadband) à supporter un flux applicatif lourd, simulant un usage réel de type "Streaming Vidéo HD/4K".
-
-Compte tenu de l'environnement d'exécution du projet (Architecture Headless / VM sans interface graphique), nous avons opté pour une approche "Cloud-Native" simulant un streaming HTTP (Progressive Download), technologie utilisée par les plateformes de VOD actuelles (Netflix, YouTube).
-
-Au lieu de lancer une interface VLC graphique (incompatible avec l'environnement), nous avons mis en place l'architecture suivante :
-
-* **Serveur de Contenu (Content Provider)** : Déploiement d'un pod nginx hébergeant un fichier vidéo haute définition simulé (500 Mo).
-* **Client (UE)** : Utilisation de l'outil curl configuré pour simuler un lecteur vidéo, avec forçage du routage via l'interface 5G.
-
----
-
-## 1.2 Architecture déployée
-
-Nous avons procédé au déploiement des services applicatifs directement dans le cluster Kubernetes, aux côtés des fonctions réseau 5G dans le même namespace.
-
-On observe dans l’état des pods :
-
-* Les fonctions du cœur 5G (AMF, SMF, UPF...) en statut Running.
-* Le pod client **ueransim-ue1** (l'utilisateur simulé).
-* Le pod **video-server** que j’ai déployé pour héberger le contenu.
-
-![Pods NexSlice](images/pods.png)`
-
----
-
-## 1.3 Réalisation des tests et résultats
-
-### Scénario A : Simulation d’un Flux Streaming Régulé (QoS)
-
-Pour ce premier test, on a limité le débit à **5 Mo/s (40 Mbps)**.
-
-Observations :
-
-* **UE** : `curl --limit-rate 5M` montre un débit parfaitement stable (5120k).
-* **Grafana** : augmentation nette du trafic UPF, confirmant que le flux vidéo transite bien par le plan utilisateur 5G.
-
-![Streaming 5Mbps](img/3.png)`
-
-### Scénario B : test de capacité maximale (Sans Limite)
-
-En supprimant la limitation :
-
-* **UE** : téléchargement à 12.6 Mo/s (~100 Mbps)
-* **Grafana** : pic à 19.2 MB/s sur l’UPF
-
-📷 *Image ici*
-![Grafana Unlimited](img/4.png)
-
----
-
-## 1.4 Conclusion
-
-L'expérimentation valide fonctionnellement le cas d'usage eMBB.
-
-* Débit garanti de 40 Mbps sans jitter pour du streaming 4K
-* Débit maximal constaté ≈ 100 Mbps
-* UPF correctement dimensionné et observé en charge réelle via Grafana
-
----
-
-# 2. Commandes utilisées
-
-## 2.1 Infrastructure complète
+## Déploiement rapide
 
 ```bash
-sudo k3s kubectl get pods -n nexslice -o wide
+# Mode debug complet (CTFd + LDAP simulés)
+./deploy.sh --debug-ctfd --debug-ldap
+
+# Production avec mot de passe admin personnalisé
+./deploy.sh --production --admin-password MonMotDePasse!
+
+# Ports personnalisés
+./deploy.sh --production --player-port 8080 --admin-port 8081
 ```
-![Grafana 1](img/1.png)
 
----
+### Options du script deploy.sh
 
-## 2.2 Test connectivité
+| Option | Description | Défaut |
+|--------|-------------|--------|
+| `--debug-ctfd` | Simule la validation CTFd | désactivé |
+| `--debug-ldap` | Simule les opérations LDAP | désactivé |
+| `--ctfd-url URL` | URL de CTFd | https://ctf.404ctf.fr |
+| `--production` | Mode production | développement |
+| `--player-port PORT` | Port Player | 5000 |
+| `--admin-port PORT` | Port Admin | 5001 |
+| `--admin-password PWD` | Mot de passe admin | admin404 |
+| `--log-level LEVEL` | Niveau de log | INFO |
+| `--reset-csv` | Réinitialise le CSV | non |
+| `--show-logs` | Affiche les logs après démarrage | non |
+
+## Déploiement manuel
 
 ```bash
-export UE1_POD=$(sudo k3s kubectl get pods -n nexslice | grep "ueransim-ue1" | awk '{print $1}')
-clear
-sudo k3s kubectl exec -it -n nexslice $UE1_POD -- ip a show uesimtun0
-```
-![Grafana 1](img/2.png)
+# Build des images
+docker compose build
 
----
+# Démarrage
+ADMIN_PASSWORD=MonMotDePasse docker compose up -d
 
-## 2.3 Test QoS streaming
+# Logs
+docker compose logs -f player
+docker compose logs -f admin
 
-### Variables
-
-```bash
-export UE1_POD=$(sudo k3s kubectl get pods -n nexslice | grep "ueransim-ue1" | awk '{print $1}')
-export VIDEO_IP=$(sudo k3s kubectl get pod video-server -n nexslice -o jsonpath='{.status.podIP}')
+# Arrêt
+docker compose down
 ```
 
-### Streaming bridé (5 Mbps)
 
-```bash
-sudo k3s kubectl exec -it -n nexslice $UE1_POD -- curl --interface uesimtun0 http://$video_ip/movie.mp4 -o /dev/null --limit-rate 5M
-```
-![Grafana 1](img/5.png)
 
----
+## Variables d'environnement
 
-# 3. YAML du Serveur Vidéo
+| Variable | Description | Défaut |
+|----------|-------------|--------|
+| `ADMIN_PASSWORD` | Mot de passe interface admin | admin404 |
+| `CTFD_URL` | URL du serveur CTFd | https://ctf.404ctf.fr |
+| `DEBUG_CTFD` | Mode debug CTFd | False |
+| `DEBUG_LDAP` | Mode debug LDAP | False |
+| `CONFIG_FILE` | Fichier de configuration | challenge_config.json |
+| `LOG_LEVEL` | Niveau de log | INFO |
+| `ACCOUNTS_LOG_FILE` | Fichier CSV des comptes | /app/data/accounts.csv |
+| `API_LOG_FILE` | Fichier de log API | /app/data/api.log |
 
-```yaml
-apiVersion: v1
-kind: Pod
-metadata:
-  name: video-server
-  namespace: nexslice
-  labels:
-    app: video-server
-spec:
-  containers:
-    - name: nginx-streamer
-      image: nginx:alpine
-      ports:
-        - containerPort: 80
-      resources:
-        limits:
-          memory: "256Mi"
-          cpu: "500m"
-      lifecycle:
-        postStart:
-          exec:
-            command:
-              [
-                "/bin/sh",
-                "-c",
-                "echo 'Génération du fichier vidéo HD...'; dd if=/dev/zero of=/usr/share/nginx/html/movie.mp4 bs=1M count=500; echo 'Vidéo prête.'"
-              ]
-```
+## Configuration des challenges
 
----
+Le fichier `challenge_config.json` est gérable directement via l'interface Admin. Format :
 
-# 4.1 Script automatisé de test
-
-```bash
-#!/bin/bash
-
-echo "=================================================="
-echo "   TEST COMPLET NEXSLICE : REALISTE + MAX SPEED"
-echo "=================================================="
-
-# 1. Récupération automatique
-echo "[INIT] Recherche des composants..."
-UE_POD=$(sudo k3s kubectl get pods -n nexslice | grep "ueransim-ue1" | awk '{print $1}')
-VIDEO_IP=$(sudo k3s kubectl get pod video-server -n nexslice -o jsonpath='{.status.podIP}')
-
-if [ -z "$UE_POD" ] || [ -z "$VIDEO_IP" ]; then
-    echo "ERREUR : UE ou Serveur introuvable."
-    exit 1
-fi
-echo "      -> UE: $UE_POD | Serveur: $VIDEO_IP"
-echo "--------------------------------------------------"
-
-# --- TEST 1 : STREAMING RÉALISTE (QoS) ---
-echo ""
-echo "[TEST 1/2] Simulation Streaming 4K (Limité à 5MB/s - 40Mbps)"
-echo "      -> Durée étendue à 60s pour bien voir le plateau Grafana..."
-
-# On laisse tourner 60 secondes pour bien stabiliser le graphique
-sudo k3s kubectl exec -it -n nexslice $UE_POD -- curl --interface uesimtun0 http://$VIDEO_IP/movie.mp4 -o /dev/null --limit-rate 5M --max-time 60
-
-echo ""
-echo "--------------------------------------------------"
-echo "   PAUSE (5 secondes) - Regardez Grafana redescendre"
-echo "--------------------------------------------------"
-sleep 5
-
-# --- TEST 2 : CAPACITÉ MAXIMALE (eMBB) ---
-echo ""
-echo "[TEST 2/2] Test de Capacité Max (eMBB - Sans limite)"
-echo "      -> Téléchargement complet du fichier (500Mo)..."
-# Pas de limite de temps : on télécharge tout jusqu'à la fin
-sudo k3s kubectl exec -it -n nexslice $UE_POD -- curl --interface uesimtun0 http://$VIDEO_IP/movie.mp4 -o /dev/null
-
-echo ""
-echo "=================================================="
-echo "   DÉMO TERMINÉE AVEC SUCCÈS"
-echo "=================================================="
-
----
+```json
+{
+  "global_config": {
+    "domain": "ctfcorp.local",
+    "admin_user": "CTFCORP\\formation",
+    "admin_password": "..."
+  },
+  "challenges": [
+    {
+      "challenge_name": "Example",
+      "description": "...",
+      "ou": "CN=Users,DC=ctfcorp,DC=local",
+      "groups": ["CTF_Player"],
+      "ldap_config": { "server": "...", "domain": "...", "admin_user": "...", "admin_password": "..." },
+      "account_options": { "user_cannot_change_password": true, "password_never_expires": true }
+    }
+  ]
+}
 ```
 
-# 🤖 4.2 Scipt d'application de la QoS sur l'UPF
+## Architecture Réseau
 
-```bash
-#!/usr/bin/env bash
-set -e
+L'application est déployée sur une VM Linux (Ubuntu) isolée, connectée à deux sous-réseaux distincts pour garantir la sécurité des environnements.
 
-# Namespace du core 5G + slices
-NS=nexslice
+### Segments Réseau (VLANs)
 
-# Slice de UE1 → UPF = oai-upf
-SLICE_ID=1
+| VLAN | Nom | CIDR | Rôle |
+|------|-----|------|------|
+| **10** | `404ctf-zone-machine-ad` | `10.0.10.0/24` | Zone de travail contenant les machines Active Directory cibles. |
+| **99** | `404ctf-zone-admin-ad` | `10.0.99.0/24` | Zone d'hébergement du code (VM Ldap-Manager). |
 
-# Interface N6 dans l’UPF (à adapter si besoin)
-N6_IF="net2"
+### Schéma de Déploiement
 
-# Débit max : 5 MB/s ≃ 40 Mbit/s
-RATE="40mbit"
+```mermaid
+graph TD
+    subgraph Accès_Distant [Accès Utilisateurs]
+        Joueur[Joueur - VPN Player]
+        Staff[Staff - VPN Admin]
+    end
 
-############################################
-# 1) Détection du pod UE1
-############################################
-echo "[INIT] Détection de l'UE1..."
-UE_POD=$(sudo k3s kubectl get pods -n "$NS" \
-  -o name | grep "ueransim-ue1" | head -n1 | cut -d'/' -f2)
+    subgraph VLAN_99 [VM Ldap-Manager - VLAN 99]
+        VPN[Serveur VPN]
+        Proxy[Apache2 Reverse Proxy]
+        Docker_Player[App Player - Docker]
+        Docker_Admin[App Admin - Docker]
+    end
 
-if [ -z "$UE_POD" ]; then
-  echo "[ERREUR] ue1 introuvable."
-  exit 1
-fi
+    subgraph VLAN_10 [Zone AD - VLAN 10]
+        AD[Active Directory Domain Controllers]
+    end
 
-echo "[INFO] UE1 : $UE_POD"
-
-############################################
-# 2) Détection du pod video-server
-############################################
-VIDEO_POD=$(sudo k3s kubectl get pods -n "$NS" \
-  -o name | grep "video-server" | head -n1 | cut -d'/' -f2)
-
-if [ -z "$VIDEO_POD" ]; then
-  echo "[ERREUR] video-server introuvable."
-  exit 1
-fi
-
-VIDEO_IP=$(sudo k3s kubectl get pod "$VIDEO_POD" -n "$NS" \
-  -o jsonpath='{.status.podIP}')
-
-echo "[INFO] Video-server : $VIDEO_POD ($VIDEO_IP)"
-
-############################################
-# 3) Détection de l’UPF de la slice
-############################################
-UPF_BASENAME="oai-upf"
-
-UPF_POD=$(sudo k3s kubectl get pods -n "$NS" \
-  -o name | grep "$UPF_BASENAME" | head -n1 | cut -d'/' -f2)
-
-if [ -z "$UPF_POD" ]; then
-  echo "[ERREUR] UPF introuvable."
-  exit 1
-fi
-
-echo "[INFO] UPF : $UPF_POD"
-
-############################################
-# 4) Vérification → QoS déjà appliquée ?
-############################################
-HAS_QDISC=$(sudo k3s kubectl exec -n "$NS" "$UPF_POD" -- \
-  bash -c "tc qdisc show dev $N6_IF | grep -c 'htb 1:' || true")
-
-############################################
-# 5) Si oui → suppression de la QoS
-############################################
-if [ "$HAS_QDISC" != "0" ]; then
-  echo "[QOS] Déjà appliquée → suppression..."
-  sudo k3s kubectl exec -n "$NS" "$UPF_POD" -- bash -c "
-    tc qdisc del dev $N6_IF root 2>/dev/null || true
-  "
-  echo "[DONE] QoS désactivée."
-  exit 0
-fi
-
-############################################
-# 6) Sinon → application de la limite
-############################################
-echo "[QOS] Application de la limite $RATE..."
-
-sudo k3s kubectl exec -n "$NS" "$UPF_POD" -- bash -c "
-  tc qdisc add dev $N6_IF root handle 1: htb default 10
-  tc class add dev $N6_IF parent 1: classid 1:10 htb rate $RATE ceil $RATE
-  tc filter add dev $N6_IF protocol ip parent 1:0 prio 1 u32 match ip dst $VIDEO_IP/32 flowid 1:10
-  tc filter add dev $N6_IF protocol ip parent 1:0 prio 1 u32 match ip src $VIDEO_IP/32 flowid 1:10
-"
-
-echo "[DONE] QoS activée : $RATE vers/depuis $VIDEO_IP"
-
----
+    Joueur --> VPN
+    Staff --> VPN
+    VPN --> Proxy
+    Proxy -->|Port 80/443| Docker_Player
+    Proxy -->|Port Admin Specifique| Docker_Admin
+    Docker_Player -.->|LDAP| AD
+    Docker_Admin -.->|LDAP| AD
 ```
-En conditions réelles, nous aurions configuré le cœur de réseau (AMBR) pour appliquer la limitation directement sur l'UPF comme sur le second script. Mais pour simplifier la démonstration, nous avons appliqué la QoS directement au niveau de l'application cliente (User Equipment) via un bridage logiciel du débit.
-Le résultat pour le client est le même mais au lieu que ce soit l'application qui drop les paquets pour limiter le débit c'est l'UPF de le fait.
 
-### Vidéo de démonstration  
-[Visionner](https://drive.google.com/file/d/1guj3hrt7OCgzpPTGvE3n1V-w_NEDkli0/view?usp=share_link)
+### Explication Technique
+
+1. **Isolation des Accès** : 
+   - L'interface **Player** est accessible via le flux VPN standard des joueurs (port et clé standard).
+   - L'interface **Admin** est strictement isolée. Elle n'est accessible que via un profil VPN spécifique ("VPN Admin"), utilisant une clé de chiffrement distincte et exposée sur un port réseau différent pour limiter la surface d'attaque.
+
+2. **Reverse Proxy (Apache2)** :
+   - Le serveur Apache2 agit comme point d'entrée unique. Il gère la terminaison SSL (si configurée) et route les requêtes vers les conteneurs Docker appropriés via `ProxyPass`.
+
+3. **Flux AD (VLAN Inter-Zone)** :
+   - La VM de déploiement (VLAN 99) possède les autorisations nécessaires pour communiquer avec le VLAN 10 uniquement pour les protocoles LDAP/LDAPS et Kerberos, permettant ainsi la gestion dynamique des comptes AD sans exposer les serveurs AD directement sur le réseau joueur.
