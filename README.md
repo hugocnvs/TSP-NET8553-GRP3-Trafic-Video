@@ -148,12 +148,12 @@ graph TD
 
     subgraph VLAN_99 [VM Ldap-Manager - VLAN 99]
         VPN_P[VPN Player : Port 1194/UDP]
-        VPN_A[VPN Admin : Port Custom/UDP]
+        VPN_A[VPN Admin : Port 1195/UDP]
         
         Proxy[Apache2 Reverse Proxy]
         
-        Docker_Player[App Player : Container Port 5000]
-        Docker_Admin[App Admin : Container Port 5001]
+        Docker_Player[App Player : Port 5000]
+        Docker_Admin[App Admin : Port 5001]
     end
 
     subgraph VLAN_10 [Zone AD - VLAN 10]
@@ -161,24 +161,19 @@ graph TD
     end
 
     %% Flux Entrants
-    Joueur -->|HTTPS:443| VPN_P
-    Staff -->|Port Specifique / Cle Unique| VPN_A
+    Joueur -->|Port 1194| VPN_P
+    Staff -->|Port 1195 / Clé Admin| VPN_A
     
-    VPN_P -->|Route Interne| Proxy
-    VPN_A -->|Route Interne| Proxy
+    VPN_P -->|Interne| Proxy
+    VPN_A -->|Interne| Proxy
     
     %% Proxy vers Containers
-    Proxy -->|ProxyPass http://localhost:5000| Docker_Player
-    Proxy -->|ProxyPass http://localhost:5001| Docker_Admin
+    Proxy -->|Localhost:5000| Docker_Player
+    Proxy -->|Localhost:5001| Docker_Admin
     
     %% Flux Sortants
-    Docker_Player -.->|LDAP/389 - LDAPS/636| AD
-    Docker_Admin -.->|LDAP/389 - LDAPS/636| AD
-    
-    %% Styles
-    style VLAN_99 fill:#f9f,stroke:#333,stroke-width:2px
-    style VLAN_10 fill:#bbf,stroke:#333,stroke-width:2px
-    style Accès_Distant fill:#dfd,stroke:#333,stroke-width:1px
+    Docker_Player -.->|LDAP/389 - 636| AD
+    Docker_Admin -.->|LDAP/389 - 636| AD
 ```
 
 ### Explication Technique
