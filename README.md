@@ -142,28 +142,43 @@ L'application est déployée sur une VM Linux (Ubuntu) isolée, connectée à de
 ```mermaid
 graph TD
     subgraph Accès_Distant [Accès Utilisateurs]
-        Joueur[Joueur - VPN Player]
-        Staff[Staff - VPN Admin]
+        Joueur[Joueur]
+        Staff[Staff Admin]
     end
 
     subgraph VLAN_99 [VM Ldap-Manager - VLAN 99]
-        VPN[Serveur VPN]
+        VPN_P[VPN Player : Port 1194/UDP]
+        VPN_A[VPN Admin : Port Custom/UDP]
+        
         Proxy[Apache2 Reverse Proxy]
-        Docker_Player[App Player - Docker]
-        Docker_Admin[App Admin - Docker]
+        
+        Docker_Player[App Player : Container Port 5000]
+        Docker_Admin[App Admin : Container Port 5001]
     end
 
     subgraph VLAN_10 [Zone AD - VLAN 10]
-        AD[Active Directory Domain Controllers]
+        AD[Domain Controllers]
     end
 
-    Joueur --> VPN
-    Staff --> VPN
-    VPN --> Proxy
-    Proxy -->|Port 80/443| Docker_Player
-    Proxy -->|Port Admin Specifique| Docker_Admin
-    Docker_Player -.->|LDAP| AD
-    Docker_Admin -.->|LDAP| AD
+    %% Flux Entrants
+    Joueur -->|HTTPS:443| VPN_P
+    Staff -->|Port Specifique / Cle Unique| VPN_A
+    
+    VPN_P -->|Route Interne| Proxy
+    VPN_A -->|Route Interne| Proxy
+    
+    %% Proxy vers Containers
+    Proxy -->|ProxyPass http://localhost:5000| Docker_Player
+    Proxy -->|ProxyPass http://localhost:5001| Docker_Admin
+    
+    %% Flux Sortants
+    Docker_Player -.->|LDAP/389 - LDAPS/636| AD
+    Docker_Admin -.->|LDAP/389 - LDAPS/636| AD
+    
+    %% Styles
+    style VLAN_99 fill:#f9f,stroke:#333,stroke-width:2px
+    style VLAN_10 fill:#bbf,stroke:#333,stroke-width:2px
+    style Accès_Distant fill:#dfd,stroke:#333,stroke-width:1px
 ```
 
 ### Explication Technique
